@@ -51,14 +51,12 @@ def visualize_forecasts(date_index, true_values, forecast_a, forecast_b,
     ax.plot(date_index, forecast_a,
             label=f"{label_a} Forecast",
             color=colors["a"],
-            linestyle="--",
             linewidth=2.0,
             alpha=0.9)
 
     ax.plot(date_index, forecast_b,
             label=f"{label_b} Forecast",
             color=colors["b"],
-            linestyle="-.",
             linewidth=2.0,
             alpha=0.9)
 
@@ -113,12 +111,12 @@ def run_forecasting_experiment():
     SEED = 10
     RESULTS_PATH = "."
     
-    # Read training data (should NOT include November 2013)
+    # Read training daa
     raw_data = pd.read_csv("TrainData.csv", parse_dates=['TIMESTAMP'])
     
-    # Filter to get training data (before November 2013)
-    train_data = raw_data[raw_data['TIMESTAMP'] < '2013-11-01'].copy()
-    train_power = train_data['POWER'].values
+    # get training data
+    train_data = raw_data['TIMESTAMP'].values
+    train_power = raw_data['POWER'].values
     
     # Load Solution.csv for November 2013 ground truth
     solution_data = pd.read_csv("Solution.csv", parse_dates=['TIMESTAMP'])
