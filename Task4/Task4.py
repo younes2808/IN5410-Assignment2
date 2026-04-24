@@ -1,6 +1,5 @@
 import numpy as np
 
-print("-" * 60)
 print("TASK 4")
 print("-" * 60)
 
