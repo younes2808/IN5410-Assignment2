@@ -26,85 +26,6 @@ def export_results(date_index, forecast_values, file_name, save_path):
     output_df.to_csv(f"{save_path}/{file_name}", index=False)
 
 
-
-def visualize_forecasts(date_index, true_values, forecast_a, forecast_b,
-                        label_a, label_b, save_path):
-    """Generate publication-quality comparison plot."""
-
-    # scientific theme
-    plt.style.use("seaborn-v0_8-whitegrid")
-
-    fig, ax = plt.subplots(figsize=(14, 7), dpi=150)
-
-    colors = {
-        "truth": "#fa8b04",
-        "a": "#d62728",         
-        "b": "#1f77b4"          
-    }
-
-    ax.plot(date_index, true_values,
-            label="Ground Truth",
-            color=colors["truth"],
-            linewidth=2.5,
-            alpha=0.95)
-
-    ax.plot(date_index, forecast_a,
-            label=f"{label_a} Forecast",
-            color=colors["a"],
-            linewidth=2.0,
-            alpha=0.9)
-
-    ax.plot(date_index, forecast_b,
-            label=f"{label_b} Forecast",
-            color=colors["b"],
-            linewidth=2.0,
-            alpha=0.9)
-
-    # Labels
-    ax.set_xlabel("Date (November 2013)", fontsize=12, fontweight="bold")
-    ax.set_ylabel("Power Output (MW)", fontsize=12, fontweight="bold")
-    ax.set_title(
-        f"Wind Power Forecasting Comparison: {label_a} vs {label_b}",
-        fontsize=14,
-        fontweight="bold",
-        pad=12
-    )
-
-    # Legend (clean, no frame clutter)
-    ax.legend(frameon=True,
-              fancybox=False,
-              edgecolor="black",
-              fontsize=10,
-              loc="upper right")
-
-    # Grid refinement (lighter, scientific style)
-    ax.grid(True, which="major", linestyle="--", linewidth=0.6, alpha=0.4)
-
-    # Remove unnecessary spines
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-
-    # Tight y-limits with margin
-    y_min = min(true_values.min(), forecast_a.min(), forecast_b.min())
-    y_max = max(true_values.max(), forecast_a.max(), forecast_b.max())
-    margin = (y_max - y_min) * 0.08
-    ax.set_ylim(y_min - margin, y_max + margin)
-
-    # Date formatting (clean scientific time axis)
-    ax.xaxis.set_major_locator(mdates.DayLocator(interval=2))
-    ax.xaxis.set_major_formatter(mdates.DateFormatter("%d-%m"))
-    plt.setp(ax.xaxis.get_majorticklabels(), rotation=45, ha="right")
-
-    plt.tight_layout()
-
-    plt.savefig(
-        f"{save_path}/comparison_{label_a}_{label_b}.png",
-        dpi=300,
-        bbox_inches="tight"
-    )
-    plt.close(fig)
-
-
 def run_forecasting_experiment():
     # Set experiment parameters
     LOOKBACK = 24  # Use past 24 hours to predict next hour
@@ -212,27 +133,8 @@ def run_forecasting_experiment():
     
     # Print performance table
     print(" RMSE Results: ")
-    print("="*60 + "\n")
     performance_table = pd.DataFrame(list(error_metrics.items()), columns=['Model', 'RMSE'])
     print(performance_table.to_string(index=False))
-    print("="*60 + "\n")
-    
-    # first plot (LR vs SVR)
-    visualize_forecasts(
-        test_dates, test_targets,
-        all_forecasts['LinearReg'], all_forecasts['SVR'],
-        'LinearReg', 'SVR', RESULTS_PATH
-    )
-    
-    # second plot (ANN vs RNN)
-    visualize_forecasts(
-        test_dates, test_targets,
-        all_forecasts['MLP'], all_forecasts['RNN'],
-        'ANN', 'RNN', RESULTS_PATH
-    )
-    
-    print("Forecasting complete! Check output files and plots.")
-
 
 if __name__ == "__main__":
     run_forecasting_experiment()
