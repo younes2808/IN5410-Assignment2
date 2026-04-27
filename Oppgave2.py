@@ -1,4 +1,4 @@
-import os
+from pathlib import Path
 
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
@@ -7,95 +7,136 @@ import pandas as pd
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error
 
+#Constants for output directory and column names 
+OUTPUT_DIR = Path("out/part_2")
+TARGET_COLUMN = "POWER"
+WIND_SPEED_COLUMN = "WS10"
+WIND_DIRECTION_COLUMN = "wind_direction"
 
-def root_mean_squared_error(y_true, y_pred):
-    return np.sqrt(mean_squared_error(y_true, y_pred))
+#RMSE function 
+def calculate_rmse(actual_values, predicted_values):
+    return np.sqrt(mean_squared_error(actual_values, predicted_values))
 
+#Load the three datasets
+def load_datasets():
+    training_data = pd.read_csv("TrainData.csv", index_col="TIMESTAMP")
+    forecast_data = pd.read_csv("WeatherForecastInput.csv", index_col="TIMESTAMP")
+    solution_data = pd.read_csv("Solution.csv", index_col="TIMESTAMP")
+    return training_data, forecast_data, solution_data
 
-def load_data():
-    train_data = pd.read_csv("TrainData.csv", index_col="TIMESTAMP")
-    weather_forecast_input = pd.read_csv("WeatherForecastInput.csv", index_col="TIMESTAMP")
-    solution = pd.read_csv("Solution.csv", index_col="TIMESTAMP")
-    return train_data, weather_forecast_input, solution
-
-
+#Compute wind direction from U10 and V10
 def add_wind_direction(dataframe):
-    dataframe["wind_direction"] = (
-        np.arctan2(dataframe["V10"], dataframe["U10"]) * (180 / np.pi)
+    dataframe = dataframe.copy()
+    dataframe[WIND_DIRECTION_COLUMN] = np.degrees(
+        np.arctan2(dataframe["V10"], dataframe["U10"])
     )
     return dataframe
 
+#Create feature sets for single and multiple regression
+def build_feature_sets(training_data, forecast_data):
+    single_feature = [WIND_SPEED_COLUMN]
+    multiple_features = [WIND_SPEED_COLUMN, WIND_DIRECTION_COLUMN]
 
-def save_predictions(predictions, index, filename):
-    pd.DataFrame(predictions, index=index, columns=["POWER"]).to_csv(filename)
+    return {
+        "Linear Regression": {
+            "training": training_data[single_feature],
+            "forecast": forecast_data[single_feature],
+        },
+        "Multiple Linear Regression": {
+            "training": training_data[multiple_features],
+            "forecast": forecast_data[multiple_features],
+        },
+    }
 
+#Train linear regression model and return predictions 
+def train_and_predict(training_features, training_targets, forecast_features):
+    model = LinearRegression()
+    model.fit(training_features, training_targets)
+    return model.predict(forecast_features)
 
-def part_2_style_assignment():
-    output_dir = "out/part_2"
-    os.makedirs(output_dir, exist_ok=True)
+#Run both models and collect predictions and RMSE 
+def evaluate_models(feature_sets, training_targets, actual_values):
+    model_results = []
 
-    train_data, weather_forecast_input, solution = load_data()
+    for model_name, features in feature_sets.items():
+        predictions = train_and_predict(
+            features["training"],
+            training_targets,
+            features["forecast"],
+        )
+        model_results.append(
+            {
+                "name": model_name,
+                "predictions": predictions,
+                "rmse": calculate_rmse(actual_values, predictions),
+            }
+        )
 
-    train_data = add_wind_direction(train_data)
-    weather_forecast_input = add_wind_direction(weather_forecast_input)
+    return model_results
 
-    X_train = train_data[["WS10", "wind_direction"]]
-    y_train = train_data[["POWER"]]
+#Save forecast file for task 2
+def save_forecast(predictions, timestamps):
+    forecast_frame = pd.DataFrame(predictions, index=timestamps, columns=[TARGET_COLUMN])
+    forecast_frame.to_csv(OUTPUT_DIR / "ForecastTemplate2.csv")
 
-    mlr_model = LinearRegression()
-    mlr_model.fit(X_train, y_train)
-
-    X_test = weather_forecast_input[["WS10", "wind_direction"]]
-    wind_power_predictions = mlr_model.predict(X_test)
-    save_predictions(
-        wind_power_predictions,
-        X_test.index,
-        os.path.join(output_dir, "ForecastTemplate2.csv"),
-    )
-
-    true_wind_power = solution[["POWER"]]
-    rmse_mlr = root_mean_squared_error(true_wind_power, wind_power_predictions)
-    print("RMSE:", rmse_mlr)
-
-    X_train_ws = train_data[["WS10"]]
-    X_test_ws = weather_forecast_input[["WS10"]]
-
-    lr_model_ws = LinearRegression()
-    lr_model_ws.fit(X_train_ws, y_train)
-    wind_power_predictions_ws = lr_model_ws.predict(X_test_ws)
-
-    rmse_lr = root_mean_squared_error(true_wind_power, wind_power_predictions_ws)
-    print("RMSE (Linear Regression with Wind Speed only):", rmse_lr)
-
-    solution_dates = pd.to_datetime(solution.index, format="%Y%m%d %H:%M")
-    forecast_dates = pd.to_datetime(weather_forecast_input.index, format="%Y%m%d %H:%M")
-
-    plt.figure(figsize=(10, 4))
-    plt.plot(solution_dates, true_wind_power, label="Real Data")
-    plt.plot(forecast_dates, wind_power_predictions_ws, label="Linear Regression")
-    plt.plot(forecast_dates, wind_power_predictions, label="Multiple Linear Regression")
-    plt.xlabel("Date (dd-mm)")
-    plt.ylabel("Wind Power")
-    plt.legend()
-    plt.tight_layout()
-    plt.gca().xaxis.set_major_locator(mdates.DayLocator())
-    plt.gca().xaxis.set_major_formatter(mdates.DateFormatter("%d-%m"))
-    plt.xticks(rotation=45)
-    plt.savefig(
-        os.path.join(output_dir, "part_2_plot.eps"),
-        transparent=False,
-        bbox_inches="tight",
-    )
-    plt.show()
-
+#Print RMSE comparison table
+def print_rmse_table(model_results):
     rmse_table = pd.DataFrame(
-        {
-            "Model": ["Linear Regression", "Multiple Linear Regression"],
-            "RMSE": [rmse_lr, rmse_mlr],
-        }
+        [{"Model": result["name"], "RMSE": result["rmse"]} for result in model_results]
     )
     print(rmse_table)
 
+#Format axis for plotting
+def format_axis(axis):
+    axis.set_xlabel("Time (November 2013)")
+    axis.set_ylabel("Wind Power")
+    axis.legend()
+    axis.xaxis.set_major_locator(mdates.DayLocator())
+    axis.xaxis.set_major_formatter(mdates.DateFormatter("%d-%m"))
+    axis.tick_params(axis="x", rotation=45)
+
+#Plot actual values and model predictions
+def plot_results(solution_dates, forecast_dates, actual_values, model_results):
+    figure, axis = plt.subplots(figsize=(10, 4))
+    axis.plot(solution_dates, actual_values, label="Real Data")
+
+    for result in model_results:
+        axis.plot(forecast_dates, result["predictions"], label=result["name"])
+
+    format_axis(axis)
+    figure.tight_layout()
+    figure.savefig(OUTPUT_DIR / "part_2_plot.eps", transparent=False, bbox_inches="tight")
+    figure.savefig(OUTPUT_DIR / "part_2_plot.png", dpi=200, bbox_inches="tight")
+    plt.show()
+
+#Run the full pipeline for task 2
+def main():
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
+    training_data, forecast_data, solution_data = load_datasets()
+    training_data = add_wind_direction(training_data)
+    forecast_data = add_wind_direction(forecast_data)
+
+    training_targets = training_data[TARGET_COLUMN]
+    actual_values = solution_data[TARGET_COLUMN]
+    feature_sets = build_feature_sets(training_data, forecast_data)
+    model_results = evaluate_models(feature_sets, training_targets, actual_values)
+
+    multiple_regression_result = next(
+        result for result in model_results if result["name"] == "Multiple Linear Regression"
+    )
+    save_forecast(multiple_regression_result["predictions"], forecast_data.index)
+    print_rmse_table(model_results)
+
+    solution_dates = pd.to_datetime(solution_data.index, format="%Y%m%d %H:%M")
+    forecast_dates = pd.to_datetime(forecast_data.index, format="%Y%m%d %H:%M")
+    plot_results(
+        solution_dates,
+        forecast_dates,
+        actual_values.to_numpy(),
+        model_results,
+    )
+
 
 if __name__ == "__main__":
-    part_2_style_assignment()
+    main()
