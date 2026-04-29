@@ -1,5 +1,8 @@
 import numpy as np
 
+
+np.random.seed(42)  # For reproducibility
+
 print("TASK 4")
 print("-" * 60)
 
