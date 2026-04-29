@@ -1,5 +1,3 @@
-from pathlib import Path
-
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 import numpy as np
@@ -7,8 +5,7 @@ import pandas as pd
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error
 
-#Constants for output directory and column names 
-OUTPUT_DIR = Path("out/part_2")
+#Constants for column names 
 TARGET_COLUMN = "POWER"
 WIND_SPEED_COLUMN = "WS10"
 WIND_DIRECTION_COLUMN = "wind_direction"
@@ -77,7 +74,7 @@ def evaluate_models(feature_sets, training_targets, actual_values):
 #Save forecast file for task 2
 def save_forecast(predictions, timestamps):
     forecast_frame = pd.DataFrame(predictions, index=timestamps, columns=[TARGET_COLUMN])
-    forecast_frame.to_csv(OUTPUT_DIR / "ForecastTemplate2.csv")
+    forecast_frame.to_csv("ForecastTemplate2.csv")
 
 #Print RMSE comparison table
 def print_rmse_table(model_results):
@@ -105,14 +102,12 @@ def plot_results(solution_dates, forecast_dates, actual_values, model_results):
 
     format_axis(axis)
     figure.tight_layout()
-    figure.savefig(OUTPUT_DIR / "part_2_plot.eps", transparent=False, bbox_inches="tight")
-    figure.savefig(OUTPUT_DIR / "part_2_plot.png", dpi=200, bbox_inches="tight")
+    figure.savefig("part_2_plot.eps", transparent=False, bbox_inches="tight")
+    figure.savefig("part_2_plot.png", dpi=200, bbox_inches="tight")
     plt.show()
 
 #Run the full pipeline for task 2
 def main():
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-
     training_data, forecast_data, solution_data = load_datasets()
     training_data = add_wind_direction(training_data)
     forecast_data = add_wind_direction(forecast_data)

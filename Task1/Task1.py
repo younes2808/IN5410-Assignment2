@@ -1,4 +1,3 @@
-from pathlib import Path
 
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
@@ -10,9 +9,8 @@ from sklearn.neighbors import KNeighborsRegressor
 from sklearn.neural_network import MLPRegressor
 from sklearn.svm import SVR
 
-#Constants: collect fixed values in one place for easier modification
+#Constants
 RANDOM_SEED = 10
-OUTPUT_DIR = Path("out/part_1")
 FEATURE_COLUMN = "WS10"
 TARGET_COLUMN = "POWER"
 
@@ -86,7 +84,7 @@ def save_all_predictions(model_results, timestamps):
     }
 
     for result in model_results:
-        output_path = OUTPUT_DIR / output_filenames[result["name"]]
+        output_path = output_filenames[result["name"]]
         save_predictions(result["predictions"], timestamps, output_path)
 
 #Print a table with RMSE results for all models
@@ -122,14 +120,12 @@ def plot_model_predictions(test_dates, actual_values, model_results):
         )
 
     figure.tight_layout()
-    figure.savefig(OUTPUT_DIR / "part_1_plot.eps", transparent=False, bbox_inches="tight")
-    figure.savefig(OUTPUT_DIR / "part_1_plot.png", dpi=200, bbox_inches="tight")
+    figure.savefig("part_1_plot.eps", transparent=False, bbox_inches="tight")
+    figure.savefig("part_1_plot.png", dpi=200, bbox_inches="tight")
     plt.show()
 
 #Run the full pipeline: loading data, training models, and plotting
 def main():
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-
     train_data, test_data, solution_data = load_data()
     training_features, training_targets, forecast_features = prepare_features_and_targets(
         train_data,
